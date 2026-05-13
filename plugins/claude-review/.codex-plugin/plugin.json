@@ -1,0 +1,34 @@
+{
+  "name": "claude-review",
+  "version": "0.1.0",
+  "description": "Run read-only Claude Code reviews from Codex.",
+  "author": {
+    "name": "Local"
+  },
+  "license": "MIT",
+  "keywords": [
+    "claude",
+    "review",
+    "code-review",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Claude Review",
+    "shortDescription": "Ask Claude Code to review your current changes",
+    "longDescription": "Claude Review lets Codex invoke the local Claude Code CLI for read-only reviews of working-tree changes or branch diffs.",
+    "developerName": "Local",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read"
+    ],
+    "defaultPrompt": [
+      "Ask Claude to review my current changes",
+      "Ask Claude to review this branch against main",
+      "Check whether Claude Code review is set up"
+    ],
+    "brandColor": "#6B5BFF",
+    "screenshots": []
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClaudeReviewOutput",
+  "type": "object",
+  "properties": {
+    "findings": {
+      "type": "array"
+    },
+    "openQuestions": {
+      "type": "array"
+    },
+    "residualRisk": {
+      "type": "array"
+    }
+  },
+  "additionalProperties": true
+}

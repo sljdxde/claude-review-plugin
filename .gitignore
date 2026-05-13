@@ -1,0 +1,15 @@
+node_modules/
+coverage/
+.DS_Store
+Thumbs.db
+
+.tmp/
+tmp/
+
+*.log
+*.tmp
+
+.codex/
+.claude/
+
+plugins/claude-review/state/
