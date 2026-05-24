@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
 import path from 'node:path';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 
 import {
@@ -78,6 +78,41 @@ test('getClaudeAuthStatus uses direct API fallback when CLI output is empty', as
     assert.equal(result.via, 'api-fallback');
   } finally {
     await server.close();
+  }
+});
+
+test('getClaudeAuthStatus discovers direct API config from ~/.claude/settings.json', async () => {
+  const homeDir = await mkdtemp(path.join(os.tmpdir(), 'claude-home-'));
+  const settingsDir = path.join(homeDir, '.claude');
+  const server = await createAnthropicLikeServer({
+    text: 'OK',
+  });
+  try {
+    await mkdir(settingsDir, { recursive: true });
+    await writeFile(
+      path.join(settingsDir, 'settings.json'),
+      JSON.stringify({
+        env: {
+          ANTHROPIC_BASE_URL: server.baseUrl,
+          ANTHROPIC_AUTH_TOKEN: 'test-token',
+          ANTHROPIC_MODEL: 'fake-model',
+        },
+      }),
+    );
+
+    const result = await getClaudeAuthStatus(process.cwd(), {
+      env: {
+        HOME: homeDir,
+        CLAUDE_REVIEW_CLAUDE_BIN: process.execPath,
+        CLAUDE_REVIEW_CLAUDE_BIN_ARGS: path.resolve('tests/fixtures/fake-claude-empty.mjs'),
+      },
+    });
+
+    assert.equal(result.authUsable, true);
+    assert.equal(result.via, 'api-fallback');
+  } finally {
+    await server.close();
+    await rm(homeDir, { recursive: true, force: true });
   }
 });
 

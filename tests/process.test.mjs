@@ -6,7 +6,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 
 import { runCommand } from '../plugins/claude-review/scripts/lib/process.mjs';
 
-test('runCommand can execute cmd wrappers on Windows', async () => {
+test('runCommand can execute cmd wrappers on Windows', { skip: process.platform !== 'win32' }, async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'claude-review-process-'));
   try {
     const scriptPath = path.join(tempDir, 'echo-test.cmd');

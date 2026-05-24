@@ -34,7 +34,8 @@ async function runGit(args, cwd) {
 
 async function createRepo() {
   const repo = await mkdtemp(path.join(os.tmpdir(), 'claude-review-git-'));
-  await runGit(['init', '-b', 'main'], repo);
+  await runGit(['init'], repo);
+  await runGit(['checkout', '-b', 'main'], repo);
   await runGit(['config', 'user.email', 'test@example.com'], repo);
   await runGit(['config', 'user.name', 'Tester'], repo);
   await writeFile(path.join(repo, 'demo.txt'), 'base\n');
