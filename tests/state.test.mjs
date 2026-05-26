@@ -16,21 +16,24 @@ import {
 
 test('state creates stable workspace paths', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'claude-review-state-'));
+  const workspace = await mkdtemp(path.join(os.tmpdir(), 'demo-'));
   try {
     const paths = getWorkspaceStatePaths({
       stateRoot: root,
-      workspaceRoot: 'D:\\project\\demo',
+      workspaceRoot: workspace,
     });
 
     assert.match(paths.workspaceDir, /demo-/);
     assert.equal(path.dirname(paths.jobsDir), paths.workspaceDir);
   } finally {
     await rm(root, { recursive: true, force: true });
+    await rm(workspace, { recursive: true, force: true });
   }
 });
 
 test('state load/save round-trips jobs', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'claude-review-state-'));
+  const workspace = await mkdtemp(path.join(os.tmpdir(), 'demo-'));
   try {
     const job = {
       id: 'job-1',
@@ -41,13 +44,13 @@ test('state load/save round-trips jobs', async () => {
 
     await writeJob({
       stateRoot: root,
-      workspaceRoot: 'D:\\project\\demo',
+      workspaceRoot: workspace,
       job,
     });
 
     const saved = await readJob({
       stateRoot: root,
-      workspaceRoot: 'D:\\project\\demo',
+      workspaceRoot: workspace,
       jobId: 'job-1',
     });
 
@@ -55,23 +58,24 @@ test('state load/save round-trips jobs', async () => {
 
     const state = await loadState({
       stateRoot: root,
-      workspaceRoot: 'D:\\project\\demo',
+      workspaceRoot: workspace,
     });
 
     assert.deepEqual(state.jobs, ['job-1']);
   } finally {
     await rm(root, { recursive: true, force: true });
+    await rm(workspace, { recursive: true, force: true });
   }
 });
 
 test('state prune removes old jobs beyond retention', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'claude-review-state-'));
+  const workspace = await mkdtemp(path.join(os.tmpdir(), 'demo-'));
   try {
-    const workspaceRoot = 'D:\\project\\demo';
     for (let index = 0; index < 4; index += 1) {
       await upsertJob({
         stateRoot: root,
-        workspaceRoot,
+        workspaceRoot: workspace,
         job: {
           id: `job-${index}`,
           status: 'completed',
@@ -83,14 +87,15 @@ test('state prune removes old jobs beyond retention', async () => {
 
     await pruneJobs({
       stateRoot: root,
-      workspaceRoot,
+      workspaceRoot: workspace,
       keep: 2,
     });
 
-    const state = await loadState({ stateRoot: root, workspaceRoot });
+    const state = await loadState({ stateRoot: root, workspaceRoot: workspace });
     assert.deepEqual(state.jobs, ['job-3', 'job-2']);
   } finally {
     await rm(root, { recursive: true, force: true });
+    await rm(workspace, { recursive: true, force: true });
   }
 });
 

@@ -12,13 +12,19 @@ export async function runCommand(binary, args = [], options = {}) {
   const useShellWrapper = process.platform === 'win32' && /\.(cmd|bat)$/i.test(binary);
 
   return new Promise((resolve, reject) => {
-    const child = spawn(useShellWrapper ? `"${binary}"` : binary, args, {
-      cwd,
-      env: env ? { ...process.env, ...env } : process.env,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      windowsHide: true,
-      shell: useShellWrapper,
-    });
+    const child = useShellWrapper
+      ? spawn('cmd.exe', ['/c', binary, ...args], {
+        cwd,
+        env: env ? { ...process.env, ...env } : process.env,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true,
+      })
+      : spawn(binary, args, {
+        cwd,
+        env: env ? { ...process.env, ...env } : process.env,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true,
+      });
 
     let stdout = '';
     let stderr = '';

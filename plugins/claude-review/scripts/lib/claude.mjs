@@ -99,24 +99,33 @@ async function runDirectApiReview(prompt, options = {}) {
     return null;
   }
 
-  const response = await fetch(`${config.baseUrl.replace(/\/$/, '')}/v1/messages`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': config.token,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: config.model,
-      max_tokens: options.maxTokens ?? 1024,
-      messages: [
-        {
-          role: 'user',
-          content: `${prompt}\n\nDo not include thinking. Return plain text only.`,
-        },
-      ],
-    }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 120_000);
+
+  let response;
+  try {
+    response = await fetch(`${config.baseUrl.replace(/\/$/, '')}/v1/messages`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': config.token,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: config.model,
+        max_tokens: options.maxTokens ?? 4096,
+        messages: [
+          {
+            role: 'user',
+            content: `${prompt}\n\nDo not include thinking. Return plain text only.`,
+          },
+        ],
+      }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     throw new Error(`Direct Claude API fallback failed with status ${response.status}.`);
@@ -152,20 +161,26 @@ export async function getClaudeAvailability(cwd, options = {}) {
   };
 }
 
+function apiAuthResult(env) {
+  return runDirectApiReview('Reply with OK only.', {
+    env,
+    maxTokens: 128,
+    timeoutMs: 30_000,
+  }).then((result) => {
+    if (result?.stdout.trim() === 'OK') {
+      return { authUsable: true, stdout: 'OK', via: 'api-fallback' };
+    }
+    return null;
+  }).catch(() => null);
+}
+
 export async function getClaudeAuthStatus(cwd, options = {}) {
   const env = getRuntimeEnv(options.env);
   const hasDirectApi = await hasDirectApiConfig(env);
   if (hasDirectApi && !env.CLAUDE_REVIEW_FORCE_CLAUDE_CLI) {
-    const fallback = await runDirectApiReview('Reply with OK only.', {
-      env,
-      maxTokens: 128,
-    }).catch(() => null);
-    if (fallback?.stdout.trim() === 'OK') {
-      return {
-        authUsable: true,
-        stdout: 'OK',
-        via: 'api-fallback',
-      };
+    const result = await apiAuthResult(env);
+    if (result) {
+      return result;
     }
   }
 
@@ -184,16 +199,9 @@ export async function getClaudeAuthStatus(cwd, options = {}) {
       { cwd, timeoutMs: 30_000, env },
     );
     if (!result.stdout.trim()) {
-      const fallback = await runDirectApiReview('Reply with OK only.', {
-        env,
-        maxTokens: 128,
-      }).catch(() => null);
-      if (fallback?.stdout.trim() === 'OK') {
-        return {
-          authUsable: true,
-          stdout: 'OK',
-          via: 'api-fallback',
-        };
+      const fallback = await apiAuthResult(env);
+      if (fallback) {
+        return fallback;
       }
     }
     return {
@@ -202,16 +210,9 @@ export async function getClaudeAuthStatus(cwd, options = {}) {
       via: 'claude-cli',
     };
   } catch {
-    const fallback = await runDirectApiReview('Reply with OK only.', {
-      env,
-      maxTokens: 128,
-    }).catch(() => null);
-    if (fallback?.stdout.trim() === 'OK') {
-      return {
-        authUsable: true,
-        stdout: 'OK',
-        via: 'api-fallback',
-      };
+    const fallback = await apiAuthResult(env);
+    if (fallback) {
+      return fallback;
     }
     return {
       authUsable: false,
@@ -240,6 +241,7 @@ export async function runClaudePrintReview(cwd, prompt, options = {}) {
     const directApi = await runDirectApiReview(prompt, {
       env,
       maxTokens: 4096,
+      timeoutMs: timeoutMinutes * 60 * 1000,
     }).catch(() => null);
     if (directApi) {
       return directApi;
@@ -271,6 +273,7 @@ export async function runClaudePrintReview(cwd, prompt, options = {}) {
   const fallback = await runDirectApiReview(prompt, {
     env,
     maxTokens: 4096,
+    timeoutMs: timeoutMinutes * 60 * 1000,
   });
   if (fallback) {
     return fallback;

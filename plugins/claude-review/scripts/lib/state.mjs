@@ -74,18 +74,17 @@ export async function upsertJob({ stateRoot = null, workspaceRoot, job }) {
 
 export async function listJobs({ stateRoot = null, workspaceRoot, includeMissing = false }) {
   const state = await loadState({ stateRoot, workspaceRoot });
-  const jobs = [];
+  const results = await Promise.all(
+    state.jobs.map(async (jobId) => {
+      const job = await readJob({ stateRoot, workspaceRoot, jobId });
+      if (job) {
+        return job;
+      }
+      return includeMissing ? { id: jobId, status: 'missing' } : null;
+    }),
+  );
 
-  for (const jobId of state.jobs) {
-    const job = await readJob({ stateRoot, workspaceRoot, jobId });
-    if (job) {
-      jobs.push(job);
-    } else if (includeMissing) {
-      jobs.push({ id: jobId, status: 'missing' });
-    }
-  }
-
-  return jobs;
+  return results.filter(Boolean);
 }
 
 export async function pruneJobs({ stateRoot = null, workspaceRoot, keep = 50 }) {

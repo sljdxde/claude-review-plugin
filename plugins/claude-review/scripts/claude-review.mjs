@@ -200,7 +200,7 @@ async function createBackgroundJob(cwd, options = {}) {
       scope: options.scope ?? 'auto',
       base: options.base ?? null,
     },
-    logFile: path.join(paths.jobsDir, `${generateJobId()}.log`),
+    logFile: null,
     result: null,
     errorMessage: null,
   };

@@ -9,7 +9,16 @@ export async function atomicWriteFile(filePath, content) {
   await ensureDir(path.dirname(filePath));
   const tempPath = `${filePath}.tmp`;
   await writeFile(tempPath, content);
-  await rename(tempPath, filePath);
+  try {
+    await rename(tempPath, filePath);
+  } catch (error) {
+    if (error.code === 'EXDEV') {
+      await writeFile(filePath, content);
+      await rm(tempPath, { force: true });
+      return;
+    }
+    throw error;
+  }
 }
 
 export async function atomicWriteJson(filePath, value) {
