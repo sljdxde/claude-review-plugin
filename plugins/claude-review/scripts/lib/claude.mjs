@@ -1,3 +1,6 @@
+import os from 'node:os';
+import path from 'node:path';
+
 import { expandArgv } from './args.mjs';
 import { binaryAvailable, runCommand, runCommandChecked } from './process.mjs';
 import { readJson } from './fs.mjs';
@@ -41,7 +44,11 @@ function buildClaudeArgs(args, env = process.env) {
 async function getClaudeSettings(env = process.env) {
   const runtimeEnv = getRuntimeEnv(env);
   const explicitPath = runtimeEnv.CLAUDE_REVIEW_SETTINGS_PATH;
-  const settingsPath = explicitPath || `${runtimeEnv.USERPROFILE || process.env.USERPROFILE}\\.claude\\settings.json`;
+  const homeDir = runtimeEnv.HOME || runtimeEnv.USERPROFILE || os.homedir();
+  const settingsPath = explicitPath || (homeDir ? path.join(homeDir, '.claude', 'settings.json') : null);
+  if (!settingsPath) {
+    return null;
+  }
   return readJson(settingsPath, null);
 }
 

@@ -75,8 +75,8 @@ test('setup reports ready with fake claude binary', async () => {
 test('review working tree returns Claude findings in wait mode', async () => {
   const repo = await mkdtemp(path.join(os.tmpdir(), 'claude-review-repo-'));
   try {
-    await runCli(['help'], {}, repo);
-    await runGit(['init', '-b', 'main'], repo);
+    await runGit(['init'], repo);
+    await runGit(['checkout', '-b', 'main'], repo);
     await runGit(['config', 'user.email', 'test@example.com'], repo);
     await runGit(['config', 'user.name', 'Tester'], repo);
     await writeFile(path.join(repo, 'demo.txt'), 'base\n');
@@ -103,7 +103,8 @@ test('review working tree returns Claude findings in wait mode', async () => {
 test('review branch uses ultrareview in wait mode', async () => {
   const repo = await mkdtemp(path.join(os.tmpdir(), 'claude-review-branch-'));
   try {
-    await runGit(['init', '-b', 'main'], repo);
+    await runGit(['init'], repo);
+    await runGit(['checkout', '-b', 'main'], repo);
     await runGit(['config', 'user.email', 'test@example.com'], repo);
     await runGit(['config', 'user.name', 'Tester'], repo);
     await writeFile(path.join(repo, 'demo.txt'), 'base\n');
@@ -134,7 +135,8 @@ test('background review can be queried through status and result', async () => {
   const repo = await mkdtemp(path.join(os.tmpdir(), 'claude-review-bg-'));
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'claude-review-state-'));
   try {
-    await runGit(['init', '-b', 'main'], repo);
+    await runGit(['init'], repo);
+    await runGit(['checkout', '-b', 'main'], repo);
     await runGit(['config', 'user.email', 'test@example.com'], repo);
     await runGit(['config', 'user.name', 'Tester'], repo);
     await writeFile(path.join(repo, 'demo.txt'), 'base\n');
@@ -181,7 +183,8 @@ test('cancel marks a running background review as cancelled', async () => {
   const repo = await mkdtemp(path.join(os.tmpdir(), 'claude-review-cancel-'));
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'claude-review-state-'));
   try {
-    await runGit(['init', '-b', 'main'], repo);
+    await runGit(['init'], repo);
+    await runGit(['checkout', '-b', 'main'], repo);
     await runGit(['config', 'user.email', 'test@example.com'], repo);
     await runGit(['config', 'user.name', 'Tester'], repo);
     await writeFile(path.join(repo, 'demo.txt'), 'base\n');
