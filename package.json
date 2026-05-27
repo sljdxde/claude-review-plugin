@@ -16,14 +16,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/sljdxde/claude-review-plugin.git"
+    "url": "git+https://github.com/sljdxde/claude-review-plugin.git"
   },
   "homepage": "https://github.com/sljdxde/claude-review-plugin#readme",
   "bugs": {
     "url": "https://github.com/sljdxde/claude-review-plugin/issues"
   },
   "bin": {
-    "claude-review": "./bin/claude-review.mjs"
+    "claude-review": "bin/claude-review.mjs"
   },
   "files": [
     "bin/",
@@ -37,7 +37,8 @@
   ],
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "prepublishOnly": "npm test"
+    "prepublishOnly": "npm test",
+    "version": "npm test"
   },
   "engines": {
     "node": ">=22"
