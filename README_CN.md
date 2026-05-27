@@ -7,43 +7,109 @@
 [![npm version](https://img.shields.io/npm/v/codex-claude-review.svg)](https://www.npmjs.com/package/codex-claude-review)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[English](README.md) | [中文](README_CN.md)
+**🌐 Language / 语言**
+
+[English](./README.md) | [简体中文](./README_CN.md)
 
 </div>
 
 ---
 
-## 能干什么？
+## 目录
 
-| 场景 | 说明 |
-|------|------|
-| 提交前自查 | 审查工作区改动，发现问题再提交 |
-| PR 审查 | 对比分支差异，模拟 code review |
-| 学习代码 | 让 Claude 分析代码质量，给出改进建议 |
-| 安全扫描 | 检测潜在的安全漏洞和性能风险 |
+- [这是什么？](#这是什么)
+- [工作原理](#工作原理)
+- [前置条件](#前置条件)
+- [快速开始](#快速开始)
+- [使用示例](#使用示例)
+- [命令参考](#命令参考)
+- [安全说明](#安全说明)
+- [许可证](#许可证)
 
-## 亮点
+---
 
-- 智能审查 - 自动识别代码问题、安全漏洞、性能风险
-- 零配置 - 安装即用，无需复杂配置
-- 双模式 - 支持工作区审查和分支对比
-- 后台运行 - 大型审查任务可后台执行
-- 只读安全 - 永远不会修改你的代码
+## 这是什么？
+
+Claude Review for Codex 是一个将 Claude Code 集成到 Codex 中的插件，用于智能代码审查。
+
+| 使用场景 | 说明 |
+|----------|------|
+| 提交前自查 | 提交前检查你的改动 |
+| PR 审查 | 对比分支差异，获取审查反馈 |
+| 学习代码 | 了解代码质量和改进建议 |
+| 安全扫描 | 检测潜在漏洞和性能问题 |
+
+---
+
+## 工作原理
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Codex CLI                            │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │              claude-review 插件                       │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐  │  │
+│  │  │ 收集        │  │ 解析        │  │ 格式化       │  │  │
+│  │  │ git diff    │→ │ 参数        │→ │ 输出         │  │  │
+│  │  └─────────────┘  └─────────────┘  └──────────────┘  │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                           ↓                                 │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │              Claude Code CLI                          │  │
+│  │  ┌─────────────────────────────────────────────────┐  │  │
+│  │  │  分析 diff → 生成审查结果                        │  │  │
+│  │  └─────────────────────────────────────────────────┘  │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**工作流程：**
+
+1. **收集改动** - 插件使用 `git diff` 收集你的代码改动
+2. **调用 Claude Code** - 将 diff 发送给 Claude Code CLI 进行分析
+3. **获取结果** - Claude Code 返回结构化的审查结果
+4. **显示输出** - 插件格式化并显示结果
+
+**关键点：**
+- Claude Code 作为 **后台进程（subagent）** 在 Codex 中运行
+- 所有分析都在 **本地** 进行 - 代码永远不会离开你的电脑
+- 插件是 **只读的** - 永远不会修改你的代码
+
+---
+
+## 前置条件
+
+安装插件前，请确保你已安装：
+
+| 依赖 | 安装命令 | 验证 |
+|------|----------|------|
+| Node.js 22+ | [下载](https://nodejs.org/) | `node --version` |
+| Git | [下载](https://git-scm.com/) | `git --version` |
+| Claude Code CLI | `npm install -g @anthropic-ai/claude-code` | `claude --version` |
+| Codex CLI | [安装指南](https://github.com/openai/codex) | `codex --version` |
+
+**安装 Claude Code 后，需要登录认证：**
+
+```bash
+claude auth login
+```
+
+---
 
 ## 快速开始
 
 ### 方式一：Agent 安装（推荐）
 
-在 Claude Code 或 Codex 中直接说：
+在 Codex 中直接说：
 
 ```
-帮我安装 codex-claude-review 插件
+install codex-claude-review
 ```
 
 或者：
 
 ```
-install codex-claude-review
+帮我安装 codex-claude-review 插件
 ```
 
 Agent 会自动完成安装和配置。
@@ -51,47 +117,25 @@ Agent 会自动完成安装和配置。
 ### 方式二：手动安装
 
 ```bash
+# 安装插件
 npm install -g codex-claude-review
+
+# 启用 Codex 集成
 claude-review enable
+
+# 验证环境
 claude-review doctor
 ```
 
-## 使用方式
+---
 
-### 在 Codex 中使用（推荐）
+## 使用示例
 
-安装后直接用自然语言：
+### 示例 1：提交前审查改动
 
-```
-让 Claude review 我的当前改动
-用 Claude 检查一下这个分支
-Claude review against main
-```
-
-### 命令行使用
+你做了一些改动，想在提交前检查：
 
 ```bash
-# 审查当前工作区改动
-claude-review review --scope working-tree --wait
-
-# 审查分支差异（对比 main）
-claude-review review --base main --wait
-
-# 后台运行审查
-claude-review review --background
-
-# 查看任务状态
-claude-review status
-
-# 查看审查结果
-claude-review result
-```
-
-## 使用案例
-
-### 案例 1：审查工作区改动
-
-```
 $ claude-review review --scope working-tree --wait
 ```
 
@@ -100,23 +144,29 @@ $ claude-review review --scope working-tree --wait
 ```
 代码审查发现
 
-1. 新导出函数缺少测试（可维护性风险）
-   文件: src/utils.js
-   新的公共函数 calculate 被导出，但没有添加相应的单元测试。
-   这会增加未来回归问题的风险。
+1. 缺少测试（高）
+   文件: src/utils.js:15
+   新导出的函数 calculate 没有单元测试。
+   建议: 添加边界情况测试（负数、零、大数值）。
 
-2. 缺少输入验证（健壮性问题）
-   文件: src/utils.js
-   函数执行计算时没有验证输入。如果传入非数字参数，结果可能不符合预期。
+2. 输入验证（中）
+   文件: src/utils.js:18
+   函数没有验证输入是否为数字。
+   建议: 计算前添加类型检查。
 
-总结
-本次更改引入了一个工具函数并导出。未发现关键 bug 或安全问题。
-主要问题是缺少测试和输入验证。
+3. 魔法数字（低）
+   文件: src/utils.js:22
+   硬编码的值 100 应该用命名常量。
+   建议: const MAX_RETRIES = 100;
+
+总结: 发现 3 个问题（1 高，1 中，1 低）
 ```
 
-### 案例 2：分支对比审查
+### 示例 2：创建 PR 前审查分支
 
-```
+你完成了功能分支，想对比 main 进行审查：
+
+```bash
 $ claude-review review --base main --wait
 ```
 
@@ -125,86 +175,73 @@ $ claude-review review --base main --wait
 ```
 代码审查发现
 
-1. Bug: 模块导出被覆盖
-   初始的 module.exports = { add } 立即被 module.exports = { add, multiply } 覆盖。
-   这使得第一次导出成为死代码。
-   修复: 删除第一次导出或合并为单次导出。
+1. Bug: 导出被覆盖（高）
+   文件: src/index.js:10
+   第一次导出 module.exports = { add } 被第二次导出覆盖。
+   修复: 合并为单条导出语句。
 
-2. 缺少测试
-   新的 multiply 函数没有添加测试。
+2. 缺少错误处理（中）
+   文件: src/api.js:45
+   fetch() 调用没有处理网络错误。
+   修复: 添加 try/catch 或 .catch() 处理器。
 
-建议修复代码:
-   function add(a, b) { return a + b; }
-   function multiply(a, b) { return a * b; }
-   module.exports = { add, multiply };
+3. 性能问题（低）
+   文件: src/render.js:78
+   数组在每次渲染时都会重新创建。
+   修复: 使用 useMemo 缓存数组。
+
+总结: 发现 3 个问题。建议合并前修复高严重性问题。
 ```
 
-### 案例 3：后台任务管理
+### 示例 3：后台运行审查
 
-```
+对于大型代码库，可以在后台运行审查：
+
+```bash
 # 启动后台审查
 $ claude-review review --background
-Claude review started in the background as review-mpm1icqi-f477cd.
-Check /claude:status review-mpm1icqi-f477cd for progress.
+已启动后台审查: review-abc123-def456
 
-# 查看状态
+# 稍后查看状态
 $ claude-review status
-Claude Review jobs for /path/to/project
+运行中: review-abc123-def456 (working tree diff)
 
-Running:
-- none
-
-Recent:
-- review-mpm1icqi-f477cd | working tree diff | completed
-
-# 查看结果
-$ claude-review result review-mpm1icqi-f477cd
-Claude Review result: review-mpm1icqi-f477cd
-Target: working tree diff
-Status: completed
-
-Findings (ordered by severity):
-1. High - Duplicate module.exports overwrites previous exports
-   ...
+# 完成后获取结果
+$ claude-review result review-abc123-def456
 ```
+
+---
 
 ## 命令参考
 
 | 命令 | 说明 |
 |------|------|
-| claude-review enable | 启用 Codex 插件集成 |
-| claude-review doctor | 检查环境依赖 |
-| claude-review review | 运行代码审查 |
-| claude-review status | 查看后台任务状态 |
-| claude-review result | 查看审查结果 |
-| claude-review cancel | 取消运行中的任务 |
+| `claude-review enable` | 启用 Codex 插件集成 |
+| `claude-review doctor` | 检查环境依赖 |
+| `claude-review review` | 运行代码审查 |
+| `claude-review status` | 查看后台任务状态 |
+| `claude-review result` | 查看审查结果 |
+| `claude-review cancel` | 取消运行中的任务 |
 
-## 审查选项
+### 审查选项
 
 | 选项 | 说明 |
 |------|------|
-| --scope <type> | 审查范围：working-tree、branch 或 auto（默认） |
-| --base <ref> | 分支对比的基准（如 main、master） |
-| --wait | 前台等待结果 |
-| --background | 后台运行（默认） |
-| --timeout <min> | 超时时间（分钟，默认 30） |
-| --json | JSON 格式输出 |
-| --cwd <path> | 指定工作目录 |
+| `--scope <type>` | 审查范围：`working-tree`、`branch` 或 `auto`（默认） |
+| `--base <ref>` | 分支对比的基准（如 `main`、`master`） |
+| `--wait` | 前台等待结果 |
+| `--background` | 后台运行（默认） |
+| `--timeout <min>` | 超时时间（分钟，默认 30） |
+| `--json` | JSON 格式输出 |
 
-## 环境要求
-
-- Node.js 22+
-- Git 仓库（项目必须使用 Git 管理）
-- Claude Code CLI（npm install -g @anthropic-ai/claude-code）
-- Claude Code 已登录（claude auth login）
-
-> 注意：此插件仅支持 Git 仓库，不支持非 Git 项目。
+---
 
 ## 安全说明
 
-- 插件始终为只读模式，永远不会修改你的代码
-- 代码内容通过本地 Claude Code CLI 发送，请勿在未授权代码上使用
-- 审查结果仅保存在本地，不会上传到第三方服务
+- **只读模式** - 插件永远不会修改你的代码
+- **本地处理** - 代码通过 Claude Code CLI 在本地分析
+- **不上传数据** - 审查结果仅保存在本地
+- **仅支持 Git** - 只能用于 Git 仓库
 
 ---
 

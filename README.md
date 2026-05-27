@@ -7,85 +7,129 @@
 [![npm version](https://img.shields.io/npm/v/codex-claude-review.svg)](https://www.npmjs.com/package/codex-claude-review)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[English](README.md) | [中文](README_CN.md)
+**🌐 Language / 语言**
+
+[English](./README.md) | [简体中文](./README_CN.md)
 
 </div>
 
 ---
 
-## What can it do?
+## Table of Contents
+
+- [What is this?](#what-is-this)
+- [How it works](#how-it-works)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Usage Examples](#usage-examples)
+- [Command Reference](#command-reference)
+- [Security](#security)
+- [License](#license)
+
+---
+
+## What is this?
+
+Claude Review for Codex is a plugin that integrates Claude Code into Codex for intelligent code review.
 
 | Use Case | Description |
 |----------|-------------|
-| Pre-commit Check | Review working tree changes before committing |
-| PR Review | Compare branch diffs, simulate code review |
-| Code Learning | Let Claude analyze code quality and suggest improvements |
-| Security Scan | Detect potential security vulnerabilities and performance risks |
+| Pre-commit Check | Review your changes before committing |
+| PR Review | Compare branch diffs, get review feedback |
+| Code Learning | Understand code quality and improvement suggestions |
+| Security Scan | Detect potential vulnerabilities and performance issues |
 
-## Highlights
+---
 
-- Smart Review - Automatically identifies code issues, security vulnerabilities, and performance risks
-- Zero Config - Install and use, no complex setup required
-- Dual Mode - Supports working tree review and branch comparison
-- Background Jobs - Large review tasks can run in the background
-- Read-Only Safe - Never modifies your code
+## How it works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Codex CLI                            │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │              claude-review plugin                     │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐  │  │
+│  │  │ git diff    │  │ parse args  │  │ format       │  │  │
+│  │  │ collection  │→ │ & validate  │→ │ output       │  │  │
+│  │  └─────────────┘  └─────────────┘  └──────────────┘  │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                           ↓                                 │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │              Claude Code CLI                          │  │
+│  │  ┌─────────────────────────────────────────────────┐  │  │
+│  │  │  Analyze diff → Generate review findings        │  │  │
+│  │  └─────────────────────────────────────────────────┘  │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Workflow:**
+
+1. **Collect changes** - Plugin uses `git diff` to collect your code changes
+2. **Invoke Claude Code** - Sends the diff to Claude Code CLI for analysis
+3. **Get results** - Claude Code returns structured review findings
+4. **Display output** - Plugin formats and displays the results
+
+**Key points:**
+- Claude Code runs as a **background process** (subagent) within Codex
+- All analysis happens **locally** - your code never leaves your machine
+- The plugin is **read-only** - it never modifies your code
+
+---
+
+## Prerequisites
+
+Before installing the plugin, make sure you have:
+
+| Requirement | Install Command | Verify |
+|-------------|-----------------|--------|
+| Node.js 22+ | [Download](https://nodejs.org/) | `node --version` |
+| Git | [Download](https://git-scm.com/) | `git --version` |
+| Claude Code CLI | `npm install -g @anthropic-ai/claude-code` | `claude --version` |
+| Codex CLI | [Install Guide](https://github.com/openai/codex) | `codex --version` |
+
+**After installing Claude Code, authenticate:**
+
+```bash
+claude auth login
+```
+
+---
 
 ## Quick Start
 
 ### Option 1: Agent Install (Recommended)
 
-Just say this in Claude Code or Codex:
+Just say this in Codex:
 
 ```
 install codex-claude-review
 ```
 
-The agent will handle installation and setup automatically.
+The agent will handle everything automatically.
 
 ### Option 2: Manual Install
 
 ```bash
+# Install the plugin
 npm install -g codex-claude-review
+
+# Enable Codex integration
 claude-review enable
+
+# Verify everything works
 claude-review doctor
 ```
 
-## Usage
+---
 
-### Use in Codex (Recommended)
+## Usage Examples
 
-After installation, use natural language:
+### Example 1: Review your changes before committing
 
-```
-Let Claude review my current changes
-Use Claude to check this branch
-Claude review against main
-```
-
-### Command Line
+You made some changes and want to check them:
 
 ```bash
-# Review current working tree changes
-claude-review review --scope working-tree --wait
-
-# Review branch diff (against main)
-claude-review review --base main --wait
-
-# Run review in background
-claude-review review --background
-
-# Check job status
-claude-review status
-
-# View review results
-claude-review result
-```
-
-## Examples
-
-### Example 1: Review working tree changes
-
-```
 $ claude-review review --scope working-tree --wait
 ```
 
@@ -94,25 +138,29 @@ Output:
 ```
 Code Review Findings
 
-1. Missing Tests for New Exported Function (Maintainability Risk)
-   File: src/utils.js
-   A new public function "calculate" is exported but no corresponding unit tests
-   have been added. This increases the risk of future regressions.
+1. Missing Tests (High)
+   File: src/utils.js:15
+   New exported function "calculate" has no unit tests.
+   Suggestion: Add tests for edge cases (negative numbers, zero, large values).
 
-2. No Input Validation (Robustness Issue)
-   File: src/utils.js
-   The function performs calculation without validating inputs. If called with
-   non-numeric inputs, the result may be unexpected.
+2. Input Validation (Medium)
+   File: src/utils.js:18
+   Function doesn't validate if inputs are numbers.
+   Suggestion: Add type checking before calculation.
 
-Summary
-The change introduces a utility function with export. No critical bugs or security
-issues were identified. The primary concerns are the absence of tests and lack of
-input validation.
+3. Magic Number (Low)
+   File: src/utils.js:22
+   Hard-coded value 100 should be a named constant.
+   Suggestion: const MAX_RETRIES = 100;
+
+Summary: 3 issues found (1 high, 1 medium, 1 low)
 ```
 
-### Example 2: Branch comparison review
+### Example 2: Review a branch before creating PR
 
-```
+You finished a feature branch and want to review it against main:
+
+```bash
 $ claude-review review --base main --wait
 ```
 
@@ -121,86 +169,73 @@ Output:
 ```
 Code Review Findings
 
-1. Bug: Module Export Overwrite
-   The initial "module.exports = { add }" is immediately overwritten by
-   "module.exports = { add, multiply }". This makes the first export dead code.
-   Fix: Remove the first export or combine them into a single export.
+1. Bug: Export Overwrite (High)
+   File: src/index.js:10
+   First export "module.exports = { add }" is overwritten by second export.
+   Fix: Combine into single export statement.
 
-2. Missing Tests
-   No tests were added for the new "multiply" function.
+2. Missing Error Handling (Medium)
+   File: src/api.js:45
+   fetch() call has no error handling for network failures.
+   Fix: Add try/catch or .catch() handler.
 
-Suggested Fix:
-   function add(a, b) { return a + b; }
-   function multiply(a, b) { return a * b; }
-   module.exports = { add, multiply };
+3. Performance (Low)
+   File: src/render.js:78
+   Array is recreated on every render cycle.
+   Fix: Use useMemo to memoize the array.
+
+Summary: 3 issues found. Consider fixing high severity issues before merging.
 ```
 
-### Example 3: Background task management
+### Example 3: Run review in background
 
-```
+For large codebases, run the review in background:
+
+```bash
 # Start background review
 $ claude-review review --background
-Claude review started in the background as review-mpm1icqi-f477cd.
-Check /claude:status review-mpm1icqi-f477cd for progress.
+Started background review: review-abc123-def456
 
-# Check status
+# Check status later
 $ claude-review status
-Claude Review jobs for /path/to/project
+Running: review-abc123-def456 (working tree diff)
 
-Running:
-- none
-
-Recent:
-- review-mpm1icqi-f477cd | working tree diff | completed
-
-# View result
-$ claude-review result review-mpm1icqi-f477cd
-Claude Review result: review-mpm1icqi-f477cd
-Target: working tree diff
-Status: completed
-
-Findings (ordered by severity):
-1. High - Duplicate module.exports overwrites previous exports
-   ...
+# Get results when done
+$ claude-review result review-abc123-def456
 ```
+
+---
 
 ## Command Reference
 
 | Command | Description |
 |---------|-------------|
-| claude-review enable | Enable Codex plugin integration |
-| claude-review doctor | Check environment dependencies |
-| claude-review review | Run code review |
-| claude-review status | Show background job status |
-| claude-review result | Show review results |
-| claude-review cancel | Cancel a running job |
+| `claude-review enable` | Enable Codex plugin integration |
+| `claude-review doctor` | Check environment dependencies |
+| `claude-review review` | Run code review |
+| `claude-review status` | Show background job status |
+| `claude-review result` | Show review results |
+| `claude-review cancel` | Cancel a running job |
 
-## Review Options
+### Review Options
 
 | Option | Description |
 |--------|-------------|
-| --scope <type> | Review scope: working-tree, branch, or auto (default) |
-| --base <ref> | Base branch for comparison (e.g., main, master) |
-| --wait | Wait for result in foreground |
-| --background | Run in background (default) |
-| --timeout <min> | Timeout in minutes (default: 30) |
-| --json | JSON output format |
-| --cwd <path> | Specify working directory |
+| `--scope <type>` | Review scope: `working-tree`, `branch`, or `auto` (default) |
+| `--base <ref>` | Base branch for comparison (e.g., `main`, `master`) |
+| `--wait` | Wait for result in foreground |
+| `--background` | Run in background (default) |
+| `--timeout <min>` | Timeout in minutes (default: 30) |
+| `--json` | JSON output format |
 
-## Requirements
-
-- Node.js 22+
-- Git repository (the project must be managed by Git)
-- Claude Code CLI (npm install -g @anthropic-ai/claude-code)
-- Claude Code authenticated (claude auth login)
-
-> Note: This plugin only works with Git repositories. Non-Git projects are not supported.
+---
 
 ## Security
 
-- Plugin is always read-only, never modifies your code
-- Code content is sent via local Claude Code CLI, do not use on unauthorized code
-- Review results are saved locally only, not uploaded to third-party services
+- **Read-only** - Plugin never modifies your code
+- **Local processing** - Code is analyzed locally via Claude Code CLI
+- **No data upload** - Review results are stored locally only
+- **Git-only** - Only works with Git repositories
 
 ---
 
