@@ -15,6 +15,15 @@
 
 ## 中文
 
+### 能干什么？
+
+| 场景 | 说明 |
+|------|------|
+| **提交前自查** | 审查工作区改动，发现问题再提交 |
+| **PR 审查** | 对比分支差异，模拟 code review |
+| **学习代码** | 让 Claude 分析代码质量，给出改进建议 |
+| **安全扫描** | 检测潜在的安全漏洞和性能风险 |
+
 ### 亮点
 
 - **智能审查** - 自动识别代码问题、安全漏洞、性能风险
@@ -23,27 +32,42 @@
 - **后台运行** - 大型审查任务可后台执行
 - **只读安全** - 永远不会修改你的代码
 
-### 快速开始
+### 安装
+
+#### 方式一：一句话安装（推荐）
+
+在 Claude Code 或 Codex 中直接说：
+
+```
+帮我安装 codex-claude-review 插件
+```
+
+或者：
+
+```
+install codex-claude-review
+```
+
+Agent 会自动完成安装和配置。
+
+#### 方式二：手动安装
 
 ```bash
-# 1. 安装
+# 全局安装
 npm install -g codex-claude-review
 
-# 2. 启用插件
+# 启用插件
 claude-review enable
 
-# 3. 检查环境
+# 检查环境
 claude-review doctor
-
-# 4. 开始使用
-claude-review review --scope working-tree --wait
 ```
 
 ### 使用方式
 
 #### 方式一：在 Codex 中使用（推荐）
 
-安装后直接在 Codex 中用自然语言：
+安装后直接用自然语言：
 
 ```
 让 Claude review 我的当前改动
@@ -191,6 +215,15 @@ Findings (ordered by severity):
 
 ## English
 
+### What can it do?
+
+| Use Case | Description |
+|----------|-------------|
+| **Pre-commit Check** | Review working tree changes before committing |
+| **PR Review** | Compare branch diffs, simulate code review |
+| **Code Learning** | Let Claude analyze code quality and suggest improvements |
+| **Security Scan** | Detect potential security vulnerabilities and performance risks |
+
 ### Highlights
 
 - **Smart Review** - Automatically identifies code issues, security vulnerabilities, and performance risks
@@ -199,27 +232,42 @@ Findings (ordered by severity):
 - **Background Jobs** - Large review tasks can run in the background
 - **Read-Only Safe** - Never modifies your code
 
-### Quick Start
+### Installation
+
+#### Option 1: One-liner Install (Recommended)
+
+Just say this in Claude Code or Codex:
+
+```
+install codex-claude-review
+```
+
+Or in Chinese:
+
+```
+帮我安装 codex-claude-review 插件
+```
+
+The agent will handle installation and setup automatically.
+
+#### Option 2: Manual Install
 
 ```bash
-# 1. Install
+# Global install
 npm install -g codex-claude-review
 
-# 2. Enable plugin
+# Enable plugin
 claude-review enable
 
-# 3. Check environment
+# Check environment
 claude-review doctor
-
-# 4. Start using
-claude-review review --scope working-tree --wait
 ```
 
 ### Usage
 
 #### Option 1: Use in Codex (Recommended)
 
-After installation, use natural language in Codex:
+After installation, use natural language:
 
 ```
 Let Claude review my current changes
