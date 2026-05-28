@@ -43,6 +43,10 @@ Claude Review for Codex is a plugin that integrates Claude Code into Codex for i
 
 ## How it works
 
+![How Claude Review works](.assets/E1.png)
+
+The diagram shows the default Claude Code CLI path. If Direct API fallback is enabled and used, the diff and prompt are sent to the configured Anthropic-compatible endpoint.
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        Codex CLI                            │
@@ -72,7 +76,7 @@ Claude Review for Codex is a plugin that integrates Claude Code into Codex for i
 
 **Key points:**
 - Claude Code runs as a **background process** (subagent) within Codex
-- All analysis happens **locally** - your code never leaves your machine
+- Analysis is **local-first** through Claude Code CLI by default
 - The plugin is **read-only** - it never modifies your code
 
 ---
@@ -98,6 +102,8 @@ claude auth login
 
 ## Quick Start
 
+![Quick start steps](.assets/E3.png)
+
 ### Option 1: Agent Install (Recommended)
 
 Just say this in Codex:
@@ -114,16 +120,20 @@ The agent will handle everything automatically.
 # Install the plugin
 npm install -g codex-claude-review
 
-# Enable Codex integration
+# Enable Codex integration (registers the local marketplace and plugin)
 claude-review enable
 
-# Verify everything works
+# Verify environment and dependencies
 claude-review doctor
 ```
+
+> **Note:** `enable` writes the local marketplace and plugin entry to `~/.codex/config.toml`.
 
 ---
 
 ## Usage Examples
+
+![Usage examples](.assets/E2.png)
 
 ### Example 1: Review your changes before committing
 
@@ -226,15 +236,15 @@ $ claude-review result review-abc123-def456
 | `--wait` | Wait for result in foreground |
 | `--background` | Run in background (default) |
 | `--timeout <min>` | Timeout in minutes (default: 30) |
-| `--json` | JSON output format |
+| `--json` | JSON output format (best-effort; falls back to raw text if parsing fails) |
 
 ---
 
 ## Security
 
 - **Read-only** - Plugin never modifies your code
-- **Local processing** - Code is analyzed locally via Claude Code CLI
-- **No data upload** - Review results are stored locally only
+- **Local-first** - By default, analysis runs locally via Claude Code CLI
+- **Direct API fallback** - When the Claude CLI cannot be reached, the plugin may fall back to a configured Anthropic-compatible API endpoint. In this mode, your diff and prompt are sent to the remote endpoint. Set `CLAUDE_REVIEW_FORCE_CLAUDE_CLI=1` to disable fallback entirely
 - **Git-only** - Only works with Git repositories
 
 ---

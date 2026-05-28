@@ -43,6 +43,10 @@ Claude Review for Codex 是一个将 Claude Code 集成到 Codex 中的插件，
 
 ## 工作原理
 
+![Claude Review 工作原理](.assets/C1.png)
+
+上图展示默认的 Claude Code CLI 本地调用路径。如果启用了并实际触发 Direct API 回退，diff 和 prompt 会发送到已配置的 Anthropic 兼容端点。
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        Codex CLI                            │
@@ -72,7 +76,7 @@ Claude Review for Codex 是一个将 Claude Code 集成到 Codex 中的插件，
 
 **关键点：**
 - Claude Code 作为 **后台进程（subagent）** 在 Codex 中运行
-- 所有分析都在 **本地** 进行 - 代码永远不会离开你的电脑
+- 默认通过 Claude Code CLI **本地优先** 执行分析
 - 插件是 **只读的** - 永远不会修改你的代码
 
 ---
@@ -98,6 +102,8 @@ claude auth login
 
 ## 快速开始
 
+![Claude Review 快速开始](.assets/C3.png)
+
 ### 方式一：Agent 安装（推荐）
 
 在 Codex 中直接说：
@@ -120,16 +126,20 @@ Agent 会自动完成安装和配置。
 # 安装插件
 npm install -g codex-claude-review
 
-# 启用 Codex 集成
+# 启用 Codex 集成（注册本地 marketplace 和插件）
 claude-review enable
 
-# 验证环境
+# 验证环境和依赖
 claude-review doctor
 ```
+
+> **注意：** `enable` 命令会将本地 marketplace 和插件条目写入 `~/.codex/config.toml`。
 
 ---
 
 ## 使用示例
+
+![Claude Review 使用示例](.assets/C2.png)
 
 ### 示例 1：提交前审查改动
 
@@ -232,15 +242,15 @@ $ claude-review result review-abc123-def456
 | `--wait` | 前台等待结果 |
 | `--background` | 后台运行（默认） |
 | `--timeout <min>` | 超时时间（分钟，默认 30） |
-| `--json` | JSON 格式输出 |
+| `--json` | JSON 格式输出（尽力解析，失败时回退为原始文本） |
 
 ---
 
 ## 安全说明
 
 - **只读模式** - 插件永远不会修改你的代码
-- **本地处理** - 代码通过 Claude Code CLI 在本地分析
-- **不上传数据** - 审查结果仅保存在本地
+- **本地优先** - 默认情况下，分析通过 Claude Code CLI 在本地运行
+- **Direct API 回退** - 当 Claude CLI 不可用时，插件可能回退到已配置的 Anthropic 兼容 API 端点。在此模式下，diff 和 prompt 会被发送到远程端点。设置 `CLAUDE_REVIEW_FORCE_CLAUDE_CLI=1` 可完全禁用回退
 - **仅支持 Git** - 只能用于 Git 仓库
 
 ---

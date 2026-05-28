@@ -244,36 +244,39 @@ export async function getUltraReviewAvailability(cwd, options = {}) {
 export async function runClaudePrintReview(cwd, prompt, options = {}) {
   const timeoutMinutes = Number(options.timeoutMinutes || 30);
   const env = getRuntimeEnv(options.env);
-  if (!env.CLAUDE_REVIEW_FORCE_CLAUDE_CLI) {
-    const directApi = await runDirectApiReview(prompt, {
-      env,
-      maxTokens: 4096,
-      timeoutMs: timeoutMinutes * 60 * 1000,
-    }).catch(() => null);
-    if (directApi) {
-      return directApi;
-    }
+  const command = await resolveClaudeCommand({ env });
+  let result;
+  let cliError = null;
+
+  try {
+    result = await runCommandChecked(
+      command,
+      buildClaudeArgs([
+        '-p',
+        '--output-format',
+        'text',
+        '--permission-mode',
+        'default',
+        prompt,
+      ], env),
+      {
+        cwd: options.commandCwd ?? cwd,
+        timeoutMs: timeoutMinutes * 60 * 1000,
+        env,
+      },
+    );
+  } catch (error) {
+    cliError = error;
   }
 
-  const command = await resolveClaudeCommand({ env });
-  const result = await runCommandChecked(
-    command,
-    buildClaudeArgs([
-      '-p',
-      '--output-format',
-      'text',
-      '--permission-mode',
-      'default',
-      prompt,
-    ], env),
-    {
-      cwd,
-      timeoutMs: timeoutMinutes * 60 * 1000,
-      env,
-    },
-  );
+  if (result?.stdout.trim()) {
+    return result;
+  }
 
-  if (result.stdout.trim()) {
+  if (env.CLAUDE_REVIEW_FORCE_CLAUDE_CLI) {
+    if (cliError) {
+      throw cliError;
+    }
     return result;
   }
 
@@ -281,9 +284,13 @@ export async function runClaudePrintReview(cwd, prompt, options = {}) {
     env,
     maxTokens: 4096,
     timeoutMs: timeoutMinutes * 60 * 1000,
-  });
+  }).catch(() => null);
   if (fallback) {
     return fallback;
+  }
+
+  if (cliError) {
+    throw cliError;
   }
 
   return result;

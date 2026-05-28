@@ -117,7 +117,17 @@ export async function terminateProcessTree(pid) {
   }
 
   if (process.platform === 'win32') {
-    await runCommand('taskkill', ['/pid', String(pid), '/t', '/f']).catch(() => {});
+    const taskkillResult = await runCommand('taskkill', ['/pid', String(pid), '/t', '/f']).catch(() => null);
+    if (!taskkillResult?.ok) {
+      try {
+        process.kill(pid);
+      } catch {
+        // Best effort only.
+      }
+    }
+    const processIds = getTaskkillProcessIds(pid, taskkillResult);
+    await Promise.all(processIds.map((processId) => waitForWindowsProcessExit(processId)));
+    await new Promise((resolve) => setTimeout(resolve, 500));
     return;
   }
 
@@ -129,5 +139,26 @@ export async function terminateProcessTree(pid) {
     } catch {
       // Best effort only.
     }
+  }
+}
+
+function getTaskkillProcessIds(pid, result) {
+  const output = `${result?.stdout ?? ''}\n${result?.stderr ?? ''}`;
+  const processIds = new Set([Number(pid)]);
+  for (const match of output.matchAll(/\b(\d{2,})\b/g)) {
+    processIds.add(Number(match[1]));
+  }
+  return [...processIds].filter(Number.isFinite);
+}
+
+async function waitForWindowsProcessExit(pid, timeoutMs = 5000) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const result = await runCommand('tasklist', ['/fi', `PID eq ${pid}`, '/fo', 'csv', '/nh']).catch(() => null);
+    const output = result?.stdout?.trim() ?? '';
+    if (!output || !output.includes(`"${pid}"`)) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 }

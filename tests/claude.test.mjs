@@ -59,6 +59,26 @@ test('runClaudePrintReview falls back to direct API when CLI output is empty', a
   }
 });
 
+test('runClaudePrintReview prefers Claude CLI output over configured direct API', async () => {
+  const server = await createAnthropicLikeServer();
+  try {
+    const result = await runClaudePrintReview(process.cwd(), 'Review this.', {
+      timeoutMinutes: 1,
+      env: {
+        CLAUDE_REVIEW_CLAUDE_BIN: process.execPath,
+        CLAUDE_REVIEW_CLAUDE_BIN_ARGS: path.resolve('tests/fixtures/fake-claude.mjs'),
+        CLAUDE_REVIEW_API_BASE_URL: server.baseUrl,
+        CLAUDE_REVIEW_API_TOKEN: 'test-token',
+        CLAUDE_REVIEW_API_MODEL: 'fake-model',
+      },
+    });
+
+    assert.match(result.stdout, /Example issue from fake Claude/);
+  } finally {
+    await server.close();
+  }
+});
+
 test('getClaudeAuthStatus uses direct API fallback when CLI output is empty', async () => {
   const server = await createAnthropicLikeServer({
     text: 'OK',

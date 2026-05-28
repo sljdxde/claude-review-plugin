@@ -117,6 +117,7 @@ async function runReviewForeground(cwd, options = {}) {
     const result = await runClaudePrintReview(cwd, prompt, {
       timeoutMinutes: options.timeout,
       env: process.env,
+      commandCwd: options.commandCwd,
     });
     return {
       target,
@@ -163,6 +164,7 @@ async function runReviewForeground(cwd, options = {}) {
   const result = await runClaudePrintReview(cwd, prompt, {
     timeoutMinutes: options.timeout,
     env: process.env,
+    commandCwd: options.commandCwd,
   });
   return {
     target,
@@ -211,7 +213,7 @@ async function createBackgroundJob(cwd, options = {}) {
   await pruneJobs({ stateRoot, workspaceRoot });
 
   const child = spawn(process.execPath, [__filename, 'review-worker', '--cwd', cwd, '--job-id', job.id], {
-    cwd,
+    cwd: pluginRoot,
     env: process.env,
     detached: true,
     stdio: 'ignore',
@@ -267,6 +269,7 @@ async function runReviewWorker(cwd, jobId) {
     const result = await runReviewForeground(cwd, {
       ...job.request,
       cwd,
+      commandCwd: pluginRoot,
     });
     await appendJobLog({ stateRoot, workspaceRoot, jobId, message: 'Review completed.' });
     await updateJob({

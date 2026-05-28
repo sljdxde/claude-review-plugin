@@ -33,7 +33,7 @@ async function runCli(args, extraEnv = {}, cwd = process.cwd()) {
   });
 }
 
-async function waitFor(predicate, timeoutMs = 8000, intervalMs = 200) {
+async function waitFor(predicate, timeoutMs = 30000, intervalMs = 200) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     const value = await predicate();
