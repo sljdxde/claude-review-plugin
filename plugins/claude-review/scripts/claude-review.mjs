@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -31,6 +32,8 @@ import {
   renderStatusReport,
   renderStoredJobResult,
 } from './lib/render.mjs';
+import { renderReviewHtml } from './lib/render-html.mjs';
+import { saveSelections } from './lib/review-actions.mjs';
 import { appendJobLog, updateJob } from './lib/tracked-jobs.mjs';
 import { ensureDir, readJson } from './lib/fs.mjs';
 import {
@@ -53,6 +56,11 @@ function print(value) {
 
 async function loadWorkingTreePrompt() {
   const promptPath = path.join(pluginRoot, 'prompts', 'working-tree-review.md');
+  return readFile(promptPath, 'utf8');
+}
+
+async function loadWorkingTreePromptJson() {
+  const promptPath = path.join(pluginRoot, 'prompts', 'working-tree-review-json.md');
   return readFile(promptPath, 'utf8');
 }
 
@@ -102,10 +110,11 @@ async function runSetup(cwd, options = {}) {
 async function runReviewForeground(cwd, options = {}) {
   await ensureGitRepository(cwd);
   const target = await resolveReviewTarget(cwd, options);
+  const useJsonFormat = options.format === 'table';
 
   if (target.mode === 'working-tree') {
     const context = await collectWorkingTreeContext(cwd, target);
-    const template = await loadWorkingTreePrompt();
+    const template = useJsonFormat ? await loadWorkingTreePromptJson() : await loadWorkingTreePrompt();
     const prompt = renderPrompt(template, {
       targetLabel: target.label,
       repoRoot: context.repoRoot,
@@ -119,6 +128,21 @@ async function runReviewForeground(cwd, options = {}) {
       env: process.env,
       commandCwd: options.commandCwd,
     });
+
+    if (useJsonFormat) {
+      const parsed = tryParseJson(result.stdout);
+      if (parsed) {
+        parsed.targetLabel = target.label;
+      }
+      return {
+        target,
+        output: result.stdout,
+        stderr: result.stderr,
+        exitCode: result.code,
+        parsed,
+      };
+    }
+
     return {
       target,
       output: result.stdout,
@@ -309,8 +333,16 @@ async function runReviewWorker(cwd, jobId) {
 }
 
 function tryParseJson(raw) {
+  let text = raw.trim();
+
+  // Strip markdown code fences if present
+  const fenceMatch = text.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/);
+  if (fenceMatch) {
+    text = fenceMatch[1].trim();
+  }
+
   try {
-    return JSON.parse(raw);
+    return JSON.parse(text);
   } catch {
     return null;
   }
@@ -406,7 +438,7 @@ function renderHelp() {
   return [
     'claude-review commands:',
     '- setup [--json]',
-    '- review [--wait|--background] [--base <ref>] [--scope auto|working-tree|branch] [--timeout <minutes>] [--json] [--cwd <path>]',
+    '- review [--wait|--background] [--base <ref>] [--scope auto|working-tree|branch] [--timeout <minutes>] [--json] [--cwd <path>] [--format text|table] [--output <path>] [--open]',
     '- status [job-id] [--json]',
     '- result [job-id] [--json]',
     '- cancel [job-id] [--json]',
@@ -423,10 +455,44 @@ async function main() {
       await runSetup(cwd, parsed.options);
       break;
     case 'review': {
+      const format = parsed.options.format ?? 'text';
+      if (format !== 'text' && format !== 'table') {
+        throw new Error(`Invalid --format value: ${format}. Must be "text" or "table".`);
+      }
+
       if (parsed.options.wait) {
         const result = await runReviewForeground(cwd, parsed.options);
+
+        if (format === 'table') {
+          const parsedJson = result.parsed ?? tryParseJson(result.output);
+          if (!parsedJson) {
+            print('Warning: Claude output is not valid JSON. Falling back to text output.\n');
+            print(result.output);
+            break;
+          }
+
+          const html = renderReviewHtml(parsedJson);
+          const outputDir = parsed.options.output ?? path.join(cwd, '.claude-review');
+          await mkdir(outputDir, { recursive: true });
+          const htmlFilename = `review-report-${randomUUID().slice(0, 8)}.html`;
+          const htmlPath = path.join(outputDir, htmlFilename);
+          await writeFile(htmlPath, html, 'utf8');
+
+          print(`Review HTML report generated: ${htmlPath}\n`);
+
+          if (parsed.options.open) {
+            const openCmd = process.platform === 'win32' ? 'start' : process.platform === 'darwin' ? 'open' : 'xdg-open';
+            spawn(openCmd, [htmlPath], { detached: true, stdio: 'ignore' }).unref();
+          }
+          break;
+        }
+
         print(parsed.options.json ? tryParseJson(result.output) ?? { rawOutput: result.output } : result.output);
         break;
+      }
+
+      if (format === 'table') {
+        print('Warning: --format=table is not supported with --background mode. Use --wait instead.\n');
       }
 
       const job = await createBackgroundJob(cwd, {

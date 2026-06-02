@@ -3,6 +3,7 @@ const BOOLEAN_OPTIONS = new Set([
   'background',
   'json',
   'all',
+  'open',
 ]);
 
 const VALUE_OPTIONS = new Set([
@@ -11,6 +12,8 @@ const VALUE_OPTIONS = new Set([
   'timeout',
   'cwd',
   'job-id',
+  'format',
+  'output',
 ]);
 
 function tokenize(input) {
