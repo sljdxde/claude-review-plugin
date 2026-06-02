@@ -19,6 +19,7 @@
 
 - [What is this?](#what-is-this)
 - [How it works](#how-it-works)
+- [Output Modes](#output-modes)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
 - [Usage Examples](#usage-examples)
@@ -78,6 +79,50 @@ The diagram shows the default Claude Code CLI path. If Direct API fallback is en
 - Claude Code runs as a **background process** (subagent) within Codex
 - Analysis is **local-first** through Claude Code CLI by default
 - The plugin is **read-only** - it never modifies your code
+
+---
+
+## Output Modes
+
+Claude Review supports two output modes:
+
+| Mode | Flag | Description | Use Case |
+|------|------|-------------|----------|
+| **Text** (default) | `--format=text` | Markdown table output | Quick review, lightweight |
+| **Interactive** | `--format=table` | HTML report with per-finding selection | Detailed review, batch actions |
+
+### Text Mode (Default)
+
+Outputs a clean Markdown table:
+
+```markdown
+| Severity | File | Issue | Suggestion |
+|----------|------|-------|------------|
+| P1 | src/app.js:42 | Missing null check | Add null check |
+| P2 | src/utils.js:15 | Unused variable | Remove it |
+```
+
+### Interactive HTML Mode
+
+Generates an interactive HTML report with:
+- Color-coded severity levels (P0/P1 red, P2 yellow, P3 green)
+- Per-finding action selection (Fix / Skip / Custom)
+- Batch operations (Select All Fix, P3 → Skip, etc.)
+- Export selections as JSON for automation
+
+```bash
+# Generate and open HTML report
+claude-review review --wait --format=table --open
+```
+
+### Natural Language Triggers
+
+When using with Codex, you can switch modes naturally:
+
+| Say this | Result |
+|----------|--------|
+| "生成 HTML 报告" / "交互式确认" | Switches to interactive mode |
+| "简单模式" / "直接看结果" | Uses text mode |
 
 ---
 
@@ -236,6 +281,9 @@ $ claude-review result review-abc123-def456
 | `--wait` | Wait for result in foreground |
 | `--background` | Run in background (default) |
 | `--timeout <min>` | Timeout in minutes (default: 30) |
+| `--format <mode>` | Output format: `text` (default) or `table` (interactive HTML) |
+| `--output <dir>` | Output directory for HTML reports (default: `.claude-review/`) |
+| `--open` | Auto-open HTML report in browser |
 | `--json` | JSON output format (best-effort; falls back to raw text if parsing fails) |
 
 ---
