@@ -154,7 +154,7 @@ claude auth login
 Just say this in Codex:
 
 ```
-install codex-claude-review
+install Claude Review from https://github.com/sljdxde/claude-review-plugin
 ```
 
 The agent will handle everything automatically.
@@ -162,8 +162,8 @@ The agent will handle everything automatically.
 ### Option 2: Manual Install
 
 ```bash
-# Install the plugin
-npm install -g codex-claude-review
+# Install the latest GitHub version
+npm install -g github:sljdxde/claude-review-plugin
 
 # Enable Codex integration (registers the package root as a local marketplace and installs the plugin)
 claude-review enable
@@ -173,6 +173,8 @@ claude-review doctor
 ```
 
 > **Note:** `enable` uses the Codex CLI to register the package root as a local marketplace and enable `claude-review@local-codex-plugins`.
+
+> **npm registry:** when the npm package is published, `npm install -g codex-claude-review` is also supported.
 
 ---
 

@@ -154,13 +154,13 @@ claude auth login
 在 Codex 中直接说：
 
 ```
-install codex-claude-review
+install Claude Review from https://github.com/sljdxde/claude-review-plugin
 ```
 
 或者：
 
 ```
-帮我安装 codex-claude-review 插件
+帮我从 https://github.com/sljdxde/claude-review-plugin 安装 Claude Review 插件
 ```
 
 Agent 会自动完成安装和配置。
@@ -168,8 +168,8 @@ Agent 会自动完成安装和配置。
 ### 方式二：手动安装
 
 ```bash
-# 安装插件
-npm install -g codex-claude-review
+# 安装最新 GitHub 版本
+npm install -g github:sljdxde/claude-review-plugin
 
 # 启用 Codex 集成（将包根目录注册为本地 marketplace，并安装插件）
 claude-review enable
@@ -179,6 +179,8 @@ claude-review doctor
 ```
 
 > **注意：** `enable` 命令会调用 Codex CLI 注册包根目录，并启用 `claude-review@local-codex-plugins`。
+
+> **npm registry：** npm 包发布完成后，也可以使用 `npm install -g codex-claude-review`。
 
 ---
 
