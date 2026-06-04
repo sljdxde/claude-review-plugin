@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const pluginRoot = path.resolve(__dirname, '..');
 const scriptPath = path.join(pluginRoot, 'plugins', 'claude-review', 'scripts', 'claude-review.mjs');
-const marketplaceRoot = path.join(pluginRoot, '.agents', 'plugins');
+const marketplaceJsonPath = path.join(pluginRoot, '.agents', 'plugins', 'marketplace.json');
 const marketplaceId = 'local-codex-plugins';
 const pluginId = 'claude-review@local-codex-plugins';
 
@@ -41,6 +41,9 @@ function showHelp() {
     --wait              Run in foreground and wait for result
     --background        Run in background (default)
     --timeout <min>     Timeout in minutes (default: 30)
+    --format <mode>     Output format: text (default) or table
+    --output <dir>      Output directory for HTML reports
+    --open              Open HTML report in browser (with --format=table --wait)
     --json              Output as JSON
     --cwd <path>        Working directory
 
@@ -65,6 +68,22 @@ function getCodexConfigPath() {
 
 function escapeTomlLiteral(value) {
   return value.replaceAll("'", "''");
+}
+
+function normalizeLocalPath(value) {
+  if (!value) {
+    return '';
+  }
+  const withoutNamespace = value.startsWith('\\\\?\\') ? value.slice(4) : value;
+  return path.resolve(withoutNamespace).toLowerCase();
+}
+
+function readTomlStringValue(line) {
+  const match = line.match(/^source\s*=\s*(['"])(.*)\1\s*$/);
+  if (!match) {
+    return null;
+  }
+  return match[1] === "'" ? match[2].replaceAll("''", "'") : match[2].replaceAll('\\"', '"');
 }
 
 function removeTomlSection(configText, sectionHeader) {
@@ -127,6 +146,7 @@ function isMarketplaceRegisteredInConfig(configText) {
   let inTargetSection = false;
   let hasLocalSourceType = false;
   let hasExpectedSource = false;
+  const expectedSource = normalizeLocalPath(pluginRoot);
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -144,7 +164,8 @@ function isMarketplaceRegisteredInConfig(configText) {
     if (/^source_type\s*=\s*"local"\s*$/.test(trimmed)) {
       hasLocalSourceType = true;
     }
-    if (trimmed.startsWith('source =') && trimmed.includes(marketplaceRoot)) {
+    const sourceValue = readTomlStringValue(trimmed);
+    if (sourceValue && normalizeLocalPath(sourceValue) === expectedSource) {
       hasExpectedSource = true;
     }
   }
@@ -152,7 +173,30 @@ function isMarketplaceRegisteredInConfig(configText) {
   return hasLocalSourceType && hasExpectedSource;
 }
 
-// Enable command - write plugin config to Codex
+async function registerWithCodexCli() {
+  await execCommand('codex', ['plugin', 'marketplace', 'add', pluginRoot], { timeoutMs: 60000 });
+  await execCommand('codex', ['plugin', 'add', pluginId], { timeoutMs: 60000 });
+}
+
+async function writeCodexConfigFallback(configPath, existingConfig) {
+  let nextConfig = existingConfig;
+  nextConfig = removeTomlSection(nextConfig, `[marketplaces.${marketplaceId}]`);
+  const marketplaceConfig = [
+    '',
+    '# Claude Review Plugin Marketplace',
+    `[marketplaces.${marketplaceId}]`,
+    'source_type = "local"',
+    `source = '${escapeTomlLiteral(pluginRoot)}'`,
+    '',
+  ].join('\n');
+  nextConfig = `${nextConfig.trimEnd()}${marketplaceConfig}`;
+
+  const cleaned = removeTomlSection(nextConfig, `[plugins."${pluginId}"]`);
+  const pluginConfig = `\n\n# Claude Review Plugin\n[plugins."${pluginId}"]\nenabled = true\n`;
+  await fs.writeFile(configPath, cleaned + pluginConfig, 'utf8');
+}
+
+// Enable command - register the local marketplace and enable the plugin in Codex
 async function runEnable() {
   const configPath = getCodexConfigPath();
   const configDir = path.dirname(configPath);
@@ -180,38 +224,18 @@ async function runEnable() {
     return;
   }
 
-  let nextConfig = existingConfig;
-
-  if (!marketplaceRegistered) {
-    nextConfig = removeTomlSection(nextConfig, `[marketplaces.${marketplaceId}]`);
-    const marketplaceConfig = [
-      '',
-      '# Claude Review Plugin Marketplace',
-      `[marketplaces.${marketplaceId}]`,
-      'source_type = "local"',
-      `source = '${escapeTomlLiteral(marketplaceRoot)}'`,
-      '',
-    ].join('\n');
-    nextConfig = `${nextConfig.trimEnd()}${marketplaceConfig}`;
-  }
-
-  // If plugin section exists but is disabled, we need to replace it
-  // Otherwise just append
-  const hasPluginSection = nextConfig.includes(pluginId);
-
-  if (hasPluginSection) {
-    // Remove the old disabled section and re-add as enabled
-    const cleaned = removeTomlSection(nextConfig, `[plugins."${pluginId}"]`);
-    const pluginConfig = `\n\n# Claude Review Plugin\n[plugins."${pluginId}"]\nenabled = true\n`;
-    await fs.writeFile(configPath, cleaned + pluginConfig, 'utf8');
-  } else {
-    const pluginConfig = `\n# Claude Review Plugin\n[plugins."${pluginId}"]\nenabled = true\n`;
-    await fs.writeFile(configPath, nextConfig + pluginConfig, 'utf8');
+  try {
+    await registerWithCodexCli();
+  } catch (error) {
+    console.log(`  \x1b[33m!\x1b[0m Codex CLI registration failed: ${error.message}`);
+    console.log('  \x1b[33m!\x1b[0m Falling back to direct config update');
+    await writeCodexConfigFallback(configPath, existingConfig);
   }
 
   console.log('  \x1b[32m✓\x1b[0m Local marketplace registered');
   console.log('  \x1b[32m✓\x1b[0m Plugin enabled in Codex');
   console.log(`  \x1b[90mConfig: ${configPath}\x1b[0m`);
+  console.log(`  \x1b[90mMarketplace: ${marketplaceJsonPath}\x1b[0m`);
   console.log('\n  You can now use the plugin in Codex:');
   console.log('    \x1b[36m"Let Claude review my changes"\x1b[0m');
   console.log('    \x1b[36m"Claude review against main"\x1b[0m');
@@ -294,7 +318,7 @@ async function runDoctor() {
     const marketplaceRegistered = isMarketplaceRegisteredInConfig(config);
     checks.push({
       name: 'Codex Marketplace',
-      version: marketplaceRegistered ? 'registered' : 'not registered',
+      version: marketplaceRegistered ? `registered (${marketplaceId})` : 'not registered',
       ok: marketplaceRegistered,
       fix: marketplaceRegistered ? null : 'Run: claude-review enable'
     });
@@ -339,12 +363,23 @@ async function runDoctor() {
 }
 
 // Helper to execute commands
-function execCommand(cmd, args) {
+function execCommand(cmd, args, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
       shell: process.platform === 'win32'
     });
+    let settled = false;
+    const timeout = options.timeoutMs
+      ? setTimeout(() => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          child.kill('SIGTERM');
+          reject(new Error(`${cmd} ${args.join(' ')} timed out after ${options.timeoutMs}ms`));
+        }, options.timeoutMs)
+      : null;
 
     let stdout = '';
     let stderr = '';
@@ -353,6 +388,13 @@ function execCommand(cmd, args) {
     child.stderr.on('data', (data) => stderr += data.toString());
 
     child.on('close', (code) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (timeout) {
+        clearTimeout(timeout);
+      }
       if (code === 0) {
         resolve({ stdout, stderr });
       } else {
@@ -360,7 +402,16 @@ function execCommand(cmd, args) {
       }
     });
 
-    child.on('error', reject);
+    child.on('error', (error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      reject(error);
+    });
   });
 }
 

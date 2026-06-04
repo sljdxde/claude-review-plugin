@@ -19,6 +19,7 @@
 
 - [这是什么？](#这是什么)
 - [工作原理](#工作原理)
+- [输出模式](#输出模式)
 - [前置条件](#前置条件)
 - [快速开始](#快速开始)
 - [使用示例](#使用示例)
@@ -81,6 +82,50 @@ Claude Review for Codex 是一个将 Claude Code 集成到 Codex 中的插件，
 
 ---
 
+## 输出模式
+
+Claude Review 支持两种输出模式：
+
+| 模式 | 参数 | 说明 | 适用场景 |
+|------|------|------|----------|
+| **文本**（默认） | `--format=text` | Markdown 表格输出 | 快速审查、轻量查看 |
+| **交互式** | `--format=table` | 生成 HTML 报告，可逐条选择处理方式 | 详细审查、批量确认 |
+
+### 文本模式（默认）
+
+输出干净的 Markdown 表格：
+
+```markdown
+| Severity | File | Issue | Suggestion |
+|----------|------|-------|------------|
+| P1 | src/app.js:42 | Missing null check | Add null check |
+| P2 | src/utils.js:15 | Unused variable | Remove it |
+```
+
+### 交互式 HTML 模式
+
+生成可交互的 HTML 报告，包含：
+- P0/P1/P2/P3 严重性颜色标记
+- 每条发现可选择 Fix / Skip / Custom
+- 批量操作（全部选择修复、P3 跳过等）
+- 导出选择结果为 JSON，便于后续自动化
+
+```bash
+# 生成并打开 HTML 报告
+claude-review review --wait --format=table --open
+```
+
+### 自然语言触发
+
+在 Codex 中可以用自然语言切换模式：
+
+| 你说 | 结果 |
+|------|------|
+| “生成 HTML 报告” / “交互式确认” | 切换到交互式模式 |
+| “简单模式” / “直接看结果” | 使用文本模式 |
+
+---
+
 ## 前置条件
 
 安装插件前，请确保你已安装：
@@ -126,14 +171,14 @@ Agent 会自动完成安装和配置。
 # 安装插件
 npm install -g codex-claude-review
 
-# 启用 Codex 集成（注册本地 marketplace 和插件）
+# 启用 Codex 集成（将包根目录注册为本地 marketplace，并安装插件）
 claude-review enable
 
 # 验证环境和依赖
 claude-review doctor
 ```
 
-> **注意：** `enable` 命令会将本地 marketplace 和插件条目写入 `~/.codex/config.toml`。
+> **注意：** `enable` 命令会调用 Codex CLI 注册包根目录，并启用 `claude-review@local-codex-plugins`。
 
 ---
 
@@ -242,6 +287,9 @@ $ claude-review result review-abc123-def456
 | `--wait` | 前台等待结果 |
 | `--background` | 后台运行（默认） |
 | `--timeout <min>` | 超时时间（分钟，默认 30） |
+| `--format <mode>` | 输出格式：`text`（默认）或 `table`（交互式 HTML） |
+| `--output <dir>` | HTML 报告输出目录（默认 `.claude-review/`） |
+| `--open` | 自动在浏览器中打开 HTML 报告 |
 | `--json` | JSON 格式输出（尽力解析，失败时回退为原始文本） |
 
 ---

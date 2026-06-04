@@ -165,14 +165,14 @@ The agent will handle everything automatically.
 # Install the plugin
 npm install -g codex-claude-review
 
-# Enable Codex integration (registers the local marketplace and plugin)
+# Enable Codex integration (registers the package root as a local marketplace and installs the plugin)
 claude-review enable
 
 # Verify environment and dependencies
 claude-review doctor
 ```
 
-> **Note:** `enable` writes the local marketplace and plugin entry to `~/.codex/config.toml`.
+> **Note:** `enable` uses the Codex CLI to register the package root as a local marketplace and enable `claude-review@local-codex-plugins`.
 
 ---
 
