@@ -1,6 +1,6 @@
 {
   "name": "codex-claude-review",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "type": "module",
   "description": "Codex plugin for read-only Claude Code reviews. Review working tree changes and branch diffs directly from Codex.",
   "license": "MIT",
